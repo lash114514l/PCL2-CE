@@ -81,8 +81,12 @@
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="用户名" Margin="0,0,25,0" />
                         <local:MyTextBox x:Name="TextLinkUsername" Grid.Row="0" Grid.ColumnSpan="2" Tag="LinkUsername" Grid.Column="2" ToolTip="PCL CE 会尽可能使用此处的用户名用于大厅信息展示。&#xa;若留空，则使用 Natayark ID 的用户名。&#xa;&#xa;部分情况下可能始终展示 Natayark ID 用户名，而非此处设置的名称。"/>
-                        <TextBlock Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" Text="自定义节点" Margin="0,0,25,0" />
-                        <local:MyTextBox x:Name="TextLinkRelay" Grid.Row="2" Grid.ColumnSpan="2" Tag="LinkRelayServer" Grid.Column="2" HintText="一般应以 tcp:// 或 udp:// 开头；若有多个，请使用英文分号分割">
+                        <TextBlock Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" Text="认证模式" Margin="0,0,25,0" />
+                        <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal">
+                            <local:MyCheckBox x:Name="CheckUseNatayarkAuth" Tag="LinkUseNatayarkAuth" Text="使用 Natayark ID 认证" ToolTip="启用此选项以使用 Natayark ID 进行认证，这将允许您使用大厅等在线服务。&#xa;禁用此选项将以匿名模式运行，但将无法使用需要认证的在线服务。"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="自定义节点" Margin="0,0,25,0" />
+                        <local:MyTextBox x:Name="TextLinkRelay" Grid.Row="4" Grid.ColumnSpan="2" Tag="LinkRelayServer" Grid.Column="2" HintText="一般应以 tcp:// 或 udp:// 开头；若有多个，请使用英文分号分割">
                             <local:MyTextBox.ValidateRules>
                                 <local:ValidateNullable />
                                 <local:ValidateNullOrWhiteSpace />

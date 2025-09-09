@@ -45,19 +45,22 @@ Public Class PageLinkLobby
         HintAnnounce.Theme = MyHint.Themes.Blue
         RunInNewThread(
             Sub()
-                If Not Setup.Get("LinkEula") Then
-                    Select Case MyMsgBox($"在使用 PCL CE 大厅之前，请阅读并同意以下条款：{vbCrLf}{vbCrLf}我承诺严格遵守中国大陆相关法律法规，不会将大厅功能用于违法违规用途。{vbCrLf}我已知晓大厅功能使用途中可能需要提供管理员权限以用于必要的操作，并会确保 PCL CE 为从官方发布渠道下载的副本。{vbCrLf}我承诺使用大厅功能带来的一切风险自行承担。{vbCrLf}我已知晓并同意 PCL CE 收集经处理的本机识别码、Natayark ID 与其他信息并在必要时提供给执法部门。{vbCrLf}为保护未成年人个人信息，使用联机大厅前，我确认我已满十四周岁。{vbCrLf}{vbCrLf}另外，你还需要同意 PCL CE 大厅相关隐私政策及《Natayark OpenID 服务条款》。", "联机大厅协议授权",
-                                                    "我已阅读并同意", "拒绝并返回", "查看相关隐私协议",
-                                                    Button3Action:=Sub() OpenWebsite("https://www.pclc.cc/privacy/personal-info-brief.html"))
-                        Case 1
-                            Setup.Set("LinkEula", True)
-                        Case 2
-                            RunInUi(
-                            Sub()
-                                FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch})
-                                FrmLinkLobby = Nothing
-                            End Sub)
-                    End Select
+                ' 检查是否使用认证模式
+                If Config.Link.UseNatayarkAuth Then
+                    If Not Setup.Get("LinkEula") Then
+                        Select Case MyMsgBox($"在使用 PCL CE 大厅之前，请阅读并同意以下条款：{vbCrLf}{vbCrLf}我承诺严格遵守中国大陆相关法律法规，不会将大厅功能用于违法违规用途。{vbCrLf}我已知晓大厅功能使用途中可能需要提供管理员权限以用于必要的操作，并会确保 PCL CE 为从官方发布渠道下载的副本。{vbCrLf}我承诺使用大厅功能带来的一切风险自行承担。{vbCrLf}我已知晓并同意 PCL CE 收集经处理的本机识别码、Natayark ID 与其他信息并在必要时提供给执法部门。{vbCrLf}为保护未成年人个人信息，使用联机大厅前，我确认我已满十四周岁。{vbCrLf}{vbCrLf}另外，你还需要同意 PCL CE 大厅相关隐私政策及《Natayark OpenID 服务条款》。", "联机大厅协议授权",
+                                                        "我已阅读并同意", "拒绝并返回", "查看相关隐私协议",
+                                                        Button3Action:=Sub() OpenWebsite("https://www.pclc.cc/privacy/personal-info-brief.html"))
+                            Case 1
+                                Setup.Set("LinkEula", True)
+                            Case 2
+                                RunInUi(
+                                Sub()
+                                    FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch})
+                                    FrmLinkLobby = Nothing
+                                End Sub)
+                        End Select
+                    End If
                 End If
             End Sub)
         '加载公告
@@ -310,7 +313,8 @@ Public Class PageLinkLobby
                            Dim retryCount = 0
                            While ETInfoProvider.CheckETStatusAsync().GetAwaiter().GetResult() = 0 AndAlso retryCount <= 15
                                retryCount += GetETInfo()
-                               If RequiresLogin AndAlso String.IsNullOrWhiteSpace(NaidProfile.AccessToken) Then
+                               ' 只有在使用认证模式且需要登录时才检查NAID令牌
+                               If Config.Link.UseNatayarkAuth AndAlso RequiresLogin AndAlso String.IsNullOrWhiteSpace(NaidProfile.AccessToken) Then
                                    Hint("请先登录 Natayark ID 再使用大厅！", HintType.Critical)
                                    LobbyController.Close()
                                End If
@@ -465,8 +469,15 @@ Public Class PageLinkLobby
                            }
 
                            RunInUi(Sub()
-                                       BtnFinishPing.Visibility = Visibility.Collapsed
-                                       BtnConnectType.Visibility = Visibility.Collapsed
+                                       ' 根据认证模式设置UI
+                                       If Config.Link.UseNatayarkAuth Then
+                                           BtnFinishPing.Visibility = Visibility.Collapsed
+                                           BtnConnectType.Visibility = Visibility.Collapsed
+                                       Else
+                                           ' 匿名模式下隐藏不需要的UI元素
+                                           BtnFinishPing.Visibility = Visibility.Collapsed
+                                           BtnConnectType.Visibility = Visibility.Collapsed
+                                       End If
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
                                        LabConnectUserName.Text = GetUsername()
@@ -518,10 +529,17 @@ Public Class PageLinkLobby
                            End If
 
                            RunInUi(Sub()
-                                       BtnFinishPing.Visibility = Visibility.Visible
-                                       LabFinishPing.Text = "-ms"
-                                       BtnConnectType.Visibility = Visibility.Visible
-                                       LabConnectType.Text = "连接中"
+                                       ' 根据认证模式设置UI
+                                       If Config.Link.UseNatayarkAuth Then
+                                           BtnFinishPing.Visibility = Visibility.Visible
+                                           LabFinishPing.Text = "-ms"
+                                           BtnConnectType.Visibility = Visibility.Visible
+                                           LabConnectType.Text = "连接中"
+                                       Else
+                                           ' 匿名模式下隐藏不需要的UI元素
+                                           BtnFinishPing.Visibility = Visibility.Collapsed
+                                           BtnConnectType.Visibility = Visibility.Collapsed
+                                       End If
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
                                        LabConnectUserName.Text = GetUsername()

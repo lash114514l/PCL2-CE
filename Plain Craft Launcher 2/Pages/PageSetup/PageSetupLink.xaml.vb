@@ -31,22 +31,33 @@ Class PageSetupLink
         ComboPreferProtocol.SelectedIndex = CInt(Config.Link.ProtocolPreference)
         CheckTryPaunchSym.Checked = Config.Link.TryPunchSym
         CheckEnableIPv6.Checked = Config.Link.EnableIPv6
-        If String.IsNullOrWhiteSpace(Config.Link.NaidRefreshToken) Then
-            CardLogged.Visibility = Visibility.Collapsed
-            CardNotLogged.Visibility = Visibility.Visible
-        Else
-            CardLogged.Visibility = Visibility.Visible
-            CardNotLogged.Visibility = Visibility.Collapsed
-            TextUsername.Text = "正在从 Natayark Network 获取账号信息..."
-            TextStatus.Text = ""
-            If IsFirstLoad Then
-                ReloadNaidData()
-                IsFirstLoad = False
+        CheckUseNatayarkAuth.Checked = Config.Link.UseNatayarkAuth
+        
+        ' 根据认证模式设置UI状态
+        If Config.Link.UseNatayarkAuth Then
+            ' 启用认证模式
+            If String.IsNullOrWhiteSpace(Config.Link.NaidRefreshToken) Then
+                CardLogged.Visibility = Visibility.Collapsed
+                CardNotLogged.Visibility = Visibility.Visible
             Else
-                TextUsername.Text = $"已以 {NaidProfile.Username} 的身份登录至 Natayark Network"
-                TextStatus.Text = $"账号状态：{If(NaidProfile.Status = 0, "正常", "异常")} / {If(NaidProfile.IsRealNamed, "已完成实名验证", "尚未进行实名验证")}"
+                CardLogged.Visibility = Visibility.Visible
+                CardNotLogged.Visibility = Visibility.Collapsed
+                TextUsername.Text = "正在从 Natayark Network 获取账号信息..."
+                TextStatus.Text = ""
+                If IsFirstLoad Then
+                    ReloadNaidData()
+                    IsFirstLoad = False
+                Else
+                    TextUsername.Text = $"已以 {NaidProfile.Username} 的身份登录至 Natayark Network"
+                    TextStatus.Text = $"账号状态：{If(NaidProfile.Status = 0, "正常", "异常")} / {If(NaidProfile.IsRealNamed, "已完成实名验证", "尚未进行实名验证")}"
+                End If
             End If
+        Else
+            ' 匿名模式
+            CardLogged.Visibility = Visibility.Collapsed
+            CardNotLogged.Visibility = Visibility.Collapsed
         End If
+        
         TextRelays.Text = "正在获取信息..."
         Do While Not (PageLinkLobby.LobbyAnnouncementLoader.State = LoadState.Finished OrElse PageLinkLobby.LobbyAnnouncementLoader.State = LoadState.Failed)
             Thread.Sleep(500)
@@ -169,7 +180,7 @@ Class PageSetupLink
     Private Shared Sub ComboBoxChange(sender As MyComboBox, e As Object) Handles ComboRelayType.SelectionChanged, ComboServerType.SelectionChanged
         If AniControlEnabled = 0 Then Setup.Set(sender.Tag, sender.SelectedIndex)
     End Sub
-    Private Shared Sub CheckBoxChange(sender As MyCheckBox, e As Object) Handles CheckLatencyFirstMode.Change, CheckEnableIPv6.Change, CheckTryPaunchSym.Change
+    Private Shared Sub CheckBoxChange(sender As MyCheckBox, e As Object) Handles CheckLatencyFirstMode.Change, CheckEnableIPv6.Change, CheckTryPaunchSym.Change, CheckUseNatayarkAuth.Change
         If AniControlEnabled = 0 Then Setup.Set(sender.Tag, sender.Checked)
     End Sub
     Private Shared Sub LinkProtocolPerferenceChange(sender As MyComboBox, e As Object) Handles ComboPreferProtocol.SelectionChanged
