@@ -173,7 +173,13 @@ Public Class PageLinkLobby
                         End Try
                     End While
                     If jObj Is Nothing Then Throw New Exception("获取联机数据失败")
-                    IsLobbyAvailable = jObj("available")
+                    ' 检查是否使用认证模式来决定大厅是否可用
+                    If Config.Link.UseNatayarkAuth Then
+                        IsLobbyAvailable = jObj("available")
+                    Else
+                        ' 在匿名模式下，如果能成功获取到数据，则认为大厅可用
+                        IsLobbyAvailable = True
+                    End If
                     AllowCustomName = jObj("allowCustomName")
                     RequiresLogin = jObj("requireLogin")
                     RequiresRealName = jObj("requireRealname")

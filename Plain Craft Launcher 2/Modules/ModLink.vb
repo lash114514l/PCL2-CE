@@ -10,6 +10,7 @@ Imports PCL.Core.Link.Lobby
 Imports PCL.Core.Link.Natayark.NatayarkProfileManager
 Imports PCL.Core.Utils
 Imports PCL.Core.Utils.OS
+Imports PCL.Core.App
 
 Public Module ModLink
 
@@ -229,56 +230,88 @@ Public Module ModLink
 
 #Region "大厅操作"
     Public Function LobbyPrecheck() As Boolean
-        If Not LobbyInfoProvider.IsLobbyAvailable Then
-            Hint("大厅功能暂不可用，请稍后再试", HintType.Critical)
-            Return False
-        End If
-        If SelectedProfile IsNot Nothing Then
-            If SelectedProfile.Username.Contains("|") Then
-                Hint("MC 玩家 ID 不可包含分隔符 (|) ！")
+        ' 检查是否使用认证模式
+        Dim useNatayarkAuth As Boolean = Config.Link.UseNatayarkAuth
+        
+        If useNatayarkAuth Then
+            ' 使用认证模式时的检查
+            If Not LobbyInfoProvider.IsLobbyAvailable Then
+                Hint("大厅功能暂不可用，请稍后再试", HintType.Critical)
                 Return False
+            End If
+            
+            If SelectedProfile IsNot Nothing Then
+                If SelectedProfile.Username.Contains("|") Then
+                    Hint("MC 玩家 ID 不可包含分隔符 (|) ！")
+                    Return False
+                End If
+            End If
+            
+            If LobbyInfoProvider.RequiresLogin Then
+                If String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshToken")) Then
+                    Hint("请先前往联机设置并登录至 Natayark Network 再进行联机！", HintType.Critical)
+                    Return False
+                End If
+                
+                Try
+                    GetNaidData(Setup.Get("LinkNaidRefreshToken"), True)
+                Catch ex As Exception
+                    Log("[Link] 刷新 Natayark ID 信息失败，需要重新登录")
+                    Hint("请重新登录 Natayark Network 账号再试！", HintType.Critical)
+                    Return False
+                End Try
+                
+                Dim WaitCount As Integer = 0
+                While String.IsNullOrWhiteSpace(NaidProfile.Username)
+                    If WaitCount > 30 Then Exit While
+                    Thread.Sleep(500)
+                    WaitCount += 1
+                End While
+                
+                If String.IsNullOrWhiteSpace(NaidProfile.Username) Then
+                    Hint("尝试获取 Natayark ID 信息失败", HintType.Critical)
+                    Return False
+                End If
+                
+                If LobbyInfoProvider.RequiresRealName AndAlso Not NaidProfile.IsRealNamed Then
+                    Hint("请先前往 Natayark 账户中心进行实名验证再尝试操作！", HintType.Critical)
+                    Return False
+                End If
+                
+                If Not NaidProfile.Status = 0 Then
+                    Hint("你的 Natayark Network 账号状态异常，可能已被封禁！", HintType.Critical)
+                    Return False
+                End If
+            End If
+            
+            If String.IsNullOrWhiteSpace(Setup.Get("LinkUsername")) AndAlso String.IsNullOrWhiteSpace(NaidProfile.Username) Then
+                Hint("请先前往设置输入一个用户名，或登录至 Natayark Network 再进行联机！", HintType.Critical)
+                Return False
+            End If
+        Else
+            ' 不使用认证模式时的检查
+            ' 在匿名模式下，我们不需要检查大厅是否可用，但需要检查用户名设置
+            ' 检查用户名设置
+            If String.IsNullOrWhiteSpace(Setup.Get("LinkUsername")) Then
+                Hint("请先前往设置输入一个用户名再进行联机！", HintType.Critical)
+                Return False
+            End If
+            
+            ' 检查用户名是否包含分隔符
+            If SelectedProfile IsNot Nothing Then
+                If SelectedProfile.Username.Contains("|") Then
+                    Hint("MC 玩家 ID 不可包含分隔符 (|) ！")
+                    Return False
+                End If
             End If
         End If
-        If LobbyInfoProvider.RequiresLogin Then
-            If String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshToken")) Then
-                Hint("请先前往联机设置并登录至 Natayark Network 再进行联机！", HintType.Critical)
-                Return False
-            End If
-            Try
-                GetNaidData(Setup.Get("LinkNaidRefreshToken"), True)
-            Catch ex As Exception
-                Log("[Link] 刷新 Natayark ID 信息失败，需要重新登录")
-                Hint("请重新登录 Natayark Network 账号再试！", HintType.Critical)
-                Return False
-            End Try
-            Dim WaitCount As Integer = 0
-            While String.IsNullOrWhiteSpace(NaidProfile.Username)
-                If WaitCount > 30 Then Exit While
-                Thread.Sleep(500)
-                WaitCount += 1
-            End While
-            If String.IsNullOrWhiteSpace(NaidProfile.Username) Then
-                Hint("尝试获取 Natayark ID 信息失败", HintType.Critical)
-                Return False
-            End If
-            If LobbyInfoProvider.RequiresRealName AndAlso Not NaidProfile.IsRealNamed Then
-                Hint("请先前往 Natayark 账户中心进行实名验证再尝试操作！", HintType.Critical)
-                Return False
-            End If
-            If Not NaidProfile.Status = 0 Then
-                Hint("你的 Natayark Network 账号状态异常，可能已被封禁！", HintType.Critical)
-                Return False
-            End If
-        End If
-        If String.IsNullOrWhiteSpace(Setup.Get("LinkUsername")) AndAlso String.IsNullOrWhiteSpace(NaidProfile.Username) Then
-            Hint("请先前往设置输入一个用户名，或登录至 Natayark Network 再进行联机！", HintType.Critical)
-            Return False
-        End If
+        
         If ETController.Precheck() = 1 Then
             Hint("正在下载联机依赖组件，请稍后...")
             DownloadEasyTier()
             Return False
         End If
+        
         If DlEasyTierLoader IsNot Nothing Then
             If DlEasyTierLoader.State = LoadState.Loading Then
                 Hint("EasyTier 尚未下载完成，请等待其下载完成后再试！")
@@ -289,6 +322,7 @@ Public Module ModLink
                 Return False
             End If
         End If
+        
         Return True
     End Function
 #End Region
